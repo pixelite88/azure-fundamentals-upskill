@@ -1,54 +1,50 @@
-# React + TypeScript + Vite
+# Azure Fundamentals Upskill
+Rekruterzy w twojej firmie borykają się z dużą ilością malwaru podczas przeglądania CV. W związku z czym Firma zakupiła 2 narzędzia do skanowania plików.
+- S_RiskAssessment - sprawdza, czy plik jest niebezpieczny
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Firma nie posiada własnych serwerów i wszystkie zasoby trzyma w Azurze. Kierowniczka działu HR wymaga by jej pracownicy posiadali dostęp tylko do bezpiecznych CV.
+Twoim zadaniem jest zaprojektować infrastrukturę (taki trochę DMZ tylko dla plików), zaimplementować aplikacje i napisać prosty formularz w html do wysyłania CV
 
-Currently, two official plugins are available:
+W skrócie:
+- Aplikacja webowa do wysyłania CV w formacie PDF
+- Skanowanie CV przy użyciu zewnętrznej biblioteki i zapisywanie rezultatu
+- Dostęp do Bezpiecznych CV po zalogowaniu
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Cel stworzonej aplikacji
 
-## Expanding the ESLint configuration
+- Rekruterzy mają dostęp tylko do CV, które przeszły pozytywnie skanowanie. 
+- Zespół bezpieczeństwa ma dostęp do wszystkich plików, wraz z raportem skanowania. 
+- CV mogą być przesyłane przez formularz na stronie www.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## Główne komponenty architektury
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. Web Application (Frontend + Backend)
+   - Frontend: formularz HTML (właściwie to ReactJS + shadcn) do przesyłania pliku PDF. 
+   - Backend (np. Node.js):
+     - Odbiera plik. 
+     - Wysyła plik do skanowania (S_RiskAssessment). 
+     - Zapisuje wynik + plik do odpowiedniego kontenera (bezpieczny / niebezpieczny).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+2. Azure Blob Storage
+   - Jeden kontener:
+     - safe-cv  
+   - Każdy plik ma metadane skanowania w blob metadata lub osobnym JSON.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+3. Azure Functions / Logic App / App Service Backend
+   - Logika biznesowa:
+     - Pobiera plik. 
+     - Wysyła do S_RiskAssessment. 
+     - Analizuje wynik. 
+     - Przenosi plik do odpowiedniego kontenera.
+
+4. Azure SQL / Cosmos DB
+   - Przechowuje metadane:
+     - Nazwa pliku 
+     - Użytkownik 
+     - Wynik skanowania 
+     - Data uploadu
+
+5. Authentication / Authorization
+   - Jedna rola:
+     - Recruiter → dostęp tylko do safe-cv.
