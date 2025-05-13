@@ -26,7 +26,7 @@ export function LoginForm({
     const formData = new FormData(form);
 
     try {
-      const response = await fetch("/api/upload-cv", {
+      const response = await fetch("/api/upload-file", {
         method: "POST",
         body: formData,
       });
