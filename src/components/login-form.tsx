@@ -14,6 +14,19 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+
+  const handleUpload = async (file: File) => {
+    const res = await fetch("/api/upload-file?filename=" + file.name, {
+      method: "POST",
+      headers: {
+        "Content-Type": file.type
+      },
+      body: await file.arrayBuffer()
+    });
+
+    if (res.ok) alert("Plik wysłany!");
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -24,7 +37,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action="/upload" method="post" encType="multipart/form-data">
+          <form onSubmit={() => handleUpload}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="cv">Choose file (PDF):</Label>
