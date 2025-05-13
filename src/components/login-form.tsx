@@ -15,16 +15,31 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"div">) {
 
-  const handleUpload = async (file: File) => {
-    const res = await fetch("/api/upload-file?filename=" + file.name, {
-      method: "POST",
-      headers: {
-        "Content-Type": file.type
-      },
-      body: await file.arrayBuffer()
-    });
+  const [status, setStatus] = useState<string | null>(null);
 
-    if (res.ok) alert("Plik wysłany!");
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStatus(null);
+
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch("/api/upload-cv", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Upload failed");
+      }
+
+      const successText = await response.text();
+      setStatus(`✅ Sukces: ${successText}`);
+    } catch (error: any) {
+      setStatus(`❌ Błąd: ${error.message}`);
+    }
   };
 
   return (
@@ -37,7 +52,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={() => handleUpload} method="post" encType="multipart/form-data">
+          <form onSubmit={handleSubmit} method="post" encType="multipart/form-data">
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="cv">Choose file (PDF):</Label>
@@ -45,8 +60,7 @@ export function LoginForm({
                     className="cursor-pointer"
                     id="file"
                     type="file"
-                    name="cv"
-                    accept="application/pdf" required
+                    name="file" accept="application/pdf" required
                 />
               </div>
               <div className="flex flex-col gap-3">
@@ -56,6 +70,7 @@ export function LoginForm({
                 <Button variant="outline" className="w-full">
                   Clear
                 </Button>
+                {status && <p>{status}</p>}
               </div>
             </div>
           </form>
