@@ -26,7 +26,7 @@ export function LoginForm({
     const formData = new FormData(form);
 
     try {
-      const response = await fetch("/api/upload-file", {
+      const response = await fetch("https://cv-new-upload-file.azurewebsites.net/api/HttpTrigger1", {
         method: "POST",
         body: formData,
       });
