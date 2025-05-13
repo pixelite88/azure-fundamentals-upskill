@@ -37,7 +37,7 @@ export function LoginForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={() => handleUpload}>
+          <form onSubmit={() => handleUpload} method="post" encType="multipart/form-data">
             <div className="flex flex-col gap-6">
               <div className="grid gap-3">
                 <Label htmlFor="cv">Choose file (PDF):</Label>
