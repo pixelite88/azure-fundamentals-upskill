@@ -29,6 +29,11 @@ export function LoginForm({
       const response = await fetch("https://cv-new-upload-file.azurewebsites.net/api/HttpTrigger1", {
         method: "POST",
         body: formData,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type"
+        },
       });
 
       if (!response.ok) {
