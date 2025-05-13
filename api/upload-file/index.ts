@@ -50,6 +50,7 @@ const httpTrigger: AzureFunction = async function (
     context: Context,
     req: HttpRequest
 ): Promise<void> {
+    console.log(req);
     if (req.method !== "POST") {
         context.res = {
             status: 405,
