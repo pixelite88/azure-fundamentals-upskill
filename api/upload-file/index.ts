@@ -1,33 +1,40 @@
-// /api/upload-file/index.ts
 import { AzureFunction, Context, HttpRequest } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
-import { v4 as uuid } from "uuid";
+import formidable, { File } from "formidable";
+import fs from "fs";
+import path from "path";
 
-const httpTrigger: AzureFunction = async function (context: Context, req: HttpRequest): Promise<void> {
-    const file = req.body;
-    const fileName = req.query.filename || `cv-${uuid()}.pdf`;
+const AZURE_STORAGE_CONNECTION_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING || "";
+const CONTAINER_NAME = "cv-uploads";
 
-    if (!file) {
-        context.res = {
-            status: 400,
-            body: "Brak pliku w żądaniu"
-        };
-        return;
-    }
+const httpTrigger: AzureFunction = async function (
+    context: Context,
+    req: HttpRequest
+): Promise<void> {
+    try {
+        const form = formidable({ multiples: false });
 
-    const AZURE_STORAGE_CONNECTION_STRING = process.env["AZURE_STORAGE_CONNECTION_STRING"];
-    const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
-    const containerClient = blobServiceClient.getContainerClient("cv-uploads");
-    const blockBlobClient = containerClient.getBlockBlobClient(fileName);
+        const parsed = await new Promise<{ files: formidable.Files }>((resolve, reject) => {
+            form.parse(req, (err, _fields, files) => {
+                if (err) reject(err);
+                else resolve({ files });
+            });
+        });
 
-    await blockBlobClient.upload(file, file.length, {
-        blobHTTPHeaders: { blobContentType: "application/pdf" }
-    });
+        const uploadedFile = parsed.files.file as File;
 
-    context.res = {
-        status: 200,
-        body: "Plik przesłany pomyślnie"
-    };
-};
+        if (!uploadedFile) {
+            context.res = {
+                status: 400,
+                body: "No file uploaded"
+            };
+            return;
+        }
 
-export default httpTrigger;
+        const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
+        const containerClient = blobServiceClient.getContainerClient(CONTAINER_NAME);
+
+        // Create container if it doesn't exist
+        await containerClient.createIfNotExists();
+
+        const blockBlobClient = containerClient.getBlockB
