@@ -16,35 +16,31 @@ export function LoginForm({
                               ...props
                           }: React.ComponentProps<"div">) {
 
-    const [status, setStatus] = useState<string | null>(null);
+    const [file, setFile] = useState<File | null>(null);
+    const [status, setStatus] = useState("");
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setStatus(null);
+    const handleUpload = async () => {
+        if (!file) return;
 
-        const form = e.currentTarget;
-        const formData = new FormData(form);
+        setStatus("Wysyłanie...");
+
+        const formData = new FormData();
+        formData.append("cv", file);
 
         try {
-            const response = await fetch("https://cv-new-upload-file.azurewebsites.net/api/HttpTrigger1", {
+            const res = await fetch("https://cvsecure-api.azurewebsites.net/api/UploadCv", {
                 method: "POST",
                 body: formData,
-                headers: {
-                    "Access-Control-Allow-Origin": "*",
-                    "Access-Control-Allow-Methods": "POST, OPTIONS",
-                    "Access-Control-Allow-Headers": "Content-Type"
-                },
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || "Upload failed");
+            const result = await res.json();
+            if (res.ok) {
+                setStatus(`Sukces: ${result.message}`);
+            } else {
+                setStatus(`Błąd: ${result.error}`);
             }
-
-            const successText = await response.text();
-            setStatus(`✅ Sukces: ${successText}`);
-        } catch (error: any) {
-            setStatus(`❌ Błąd: ${error.message}`);
+        } catch (err) {
+            setStatus("Błąd połączenia");
         }
     };
 
@@ -58,19 +54,20 @@ export function LoginForm({
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit} method="post" encType="multipart/form-data">
+
                         <div className="flex flex-col gap-6">
                             <div className="grid gap-3">
                                 <Label htmlFor="cv">Choose file (PDF):</Label>
                                 <Input
                                     className="cursor-pointer"
-                                    id="file"
                                     type="file"
-                                    name="file" accept="application/pdf" required
+                                    accept="application/pdf"
+                                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                                    required
                                 />
                             </div>
                             <div className="flex flex-col gap-3">
-                                <Button type="submit" variant={"ghost"} className="w-full">
+                                <Button onClick={handleUpload} variant={"ghost"} className="w-full">
                                     Send CV
                                 </Button>
                                 <Button variant="outline" className="w-full">
@@ -79,7 +76,7 @@ export function LoginForm({
                                 {status && <p>{status}</p>}
                             </div>
                         </div>
-                    </form>
+
                 </CardContent>
             </Card>
         </div>
