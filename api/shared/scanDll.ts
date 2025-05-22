@@ -5,8 +5,8 @@ const dllPath = path.join(__dirname, 'S_RiskAssessment.dll');
 
 const scan = edge.func({
     assemblyFile: dllPath,
-    typeName: 'S_RiskAssessment.Scanner',     // Zastąp odpowiednią nazwą klasy
-    methodName: 'Scan'                        // Zastąp odpowiednią nazwą metody
+    typeName: 'S_RiskAssessment.Scanner',     // klasa z pliku dll
+    methodName: 'Scan'                        // metoda z dll
 });
 
 export const scanBuffer = async (buffer: Buffer): Promise<boolean> => {

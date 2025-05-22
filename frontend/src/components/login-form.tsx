@@ -28,7 +28,7 @@ export function LoginForm({
         formData.append("cv", file);
 
         try {
-            const res = await fetch("https://cvsecure-api.azurewebsites.net/api/UploadCv", {
+            const res = await fetch("https://cv-new-upload-file.azurewebsites.net/api/UploadCv", {
                 method: "POST",
                 body: formData,
             });
