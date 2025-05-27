@@ -33,6 +33,8 @@ export function LoginForm({
                 body: formData,
             });
 
+            console.log(res);
+
             const result = await res.json();
             if (res.ok) {
                 setStatus(`Sukces: ${result.message}`);
@@ -40,7 +42,7 @@ export function LoginForm({
                 setStatus(`Błąd: ${result.error}`);
             }
         } catch (err) {
-            setStatus("Błąd połączenia");
+            setStatus(`Błąd połączenia ${JSON.stringify(err)}`);
         }
     };
 
