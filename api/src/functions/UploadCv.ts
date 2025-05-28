@@ -1,88 +1,51 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
-// @ts-ignore
-import formidable from "formidable";
-import { IncomingMessage } from "http";
 import 'dotenv/config';
 
-
-// Pomocnicza funkcja do parsowania formularza
-function parseForm(req: IncomingMessage): Promise<{ fileBuffer: Buffer, filename: string }> {
-    return new Promise((resolve, reject) => {
-        const form = formidable({ multiples: false });
-
-        form.parse(req, (err, fields, files) => {
-            if (err) return reject(err);
-
-            const file: formidable.File | undefined = files.file as formidable.File;
-            if (!file || !file.filepath) return reject(new Error("Brak pliku"));
-
-            const fs = require('fs');
-            const buffer = fs.readFileSync(file.filepath);
-            resolve({ fileBuffer: buffer, filename: file.originalFilename || "uploaded.pdf" });
-        });
-    });
-}
-
 export async function UploadCv(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
-    context.log(`Http function processed request for url "${request.url}"`);
+    context.log("UploadCv: rozpoczęcie przetwarzania pliku");
 
-    if (!request.headers["content-type"]?.includes("multipart/form-data")) {
+    const contentType = request.headers.get("content-type") || "application/octet-stream";
+    if (!contentType.includes("application/pdf")) {
         return {
             status: 400,
-            body: "Niepoprawny nagłówek – oczekiwano multipart/form-data."
+            body: "Niepoprawny typ pliku – oczekiwano application/pdf.",
         };
     }
 
-    let fileBuffer: Buffer;
-    let originalName: string;
-
-    try {
-        const result = await parseForm(request as any); // rzutowanie potrzebne do użycia IncomingMessage
-        fileBuffer = result.fileBuffer;
-        originalName = result.filename;
-    } catch (err) {
-        context.log("Błąd parsowania formularza:", err);
+    const buffer = Buffer.from(await request.arrayBuffer());
+    if (!buffer || buffer.length === 0) {
         return {
             status: 400,
-            body: "Błąd przetwarzania pliku."
+            body: "Brak danych w przesłanym pliku.",
         };
     }
 
-    // TODO: Skanowanie pliku przy pomocy DLL
-    // const isSafe = await scanFileWithDll(fileBuffer);
-    // if (!isSafe) {
-    //     return {
-    //         status: 400,
-    //         body: "Plik został uznany za niebezpieczny."
-    //     };
-    // }
-
-    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING!);
+    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING);
     const containerClient = blobServiceClient.getContainerClient("safe-cv");
 
-    const blobName = `${Date.now()}_${originalName.replace(/\s+/g, "_")}`;
+    const blobName = `${Date.now()}_uploaded.pdf`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    await blockBlobClient.uploadData(fileBuffer, {
+    await blockBlobClient.uploadData(buffer, {
         blobHTTPHeaders: { blobContentType: "application/pdf" },
     });
 
     const exists = await blockBlobClient.exists();
     if (exists) {
-        context.log(`Plik ${blobName} został pomyślnie zapisany do Blob Storage.`);
+        context.log(`Plik ${blobName} został zapisany.`);
     } else {
-        context.log(`Błąd – plik ${blobName} nie został zapisany.`);
+        context.log(`Błąd zapisu pliku ${blobName}.`);
     }
 
     return {
         status: 200,
-        body: `CV przesłane jako ${blobName}`
+        body: `CV przesłane jako ${blobName}`,
     };
 }
 
-app.http('UploadCv', {
-    methods: ['POST'],
-    authLevel: 'anonymous',
-    handler: UploadCv
+app.http("UploadCv", {
+    methods: ["POST"],
+    authLevel: "anonymous",
+    handler: UploadCv,
 });

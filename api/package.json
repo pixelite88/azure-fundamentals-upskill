@@ -8,11 +8,13 @@
     "watch": "tsc -w",
     "clean": "rimraf dist",
     "prestart": "npm run clean && npm run build",
-    "start": "func start",
+    "start": "npm run clean && npm run build && func start",
+    "start:nocors": "npm run clean && npm run build && func host start --port 7072 --cors *",
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
+    "busboy": "^1.6.0",
     "dotenv": "^16.5.0"
   },
   "devDependencies": {
