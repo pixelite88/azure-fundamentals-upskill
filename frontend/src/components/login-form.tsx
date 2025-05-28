@@ -36,9 +36,11 @@ export function LoginForm({
             console.log(res);
 
             const result = await res.json();
-            if (res.ok) {
+            if (result.ok) {
+                console.log("ok",res);
                 setStatus(`Sukces: ${result.message}`);
             } else {
+                console.log("nieok",res);
                 setStatus(`Błąd: ${result.error}`);
             }
         } catch (err) {

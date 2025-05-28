@@ -18,16 +18,15 @@ export async function UploadCv(request: HttpRequest, context: InvocationContext)
         return;
     }
 
-    // const buffer = req.body;
-
+    const buffer = request.body;
 
     // const isSafe = await scanFileWithDll(buffer);
     // if (!isSafe) {
     // context.res = {
     //     status: 400,
     //     body: { error: "Plik został uznany za niebezpieczny." }
-    //     // };
-    //     // return;
+    //     };
+    //     return;
     // }
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING!);
@@ -36,15 +35,15 @@ export async function UploadCv(request: HttpRequest, context: InvocationContext)
     const blobName = `${Date.now()}_${Math.random().toString(36).slice(2)}.pdf`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-    // await blockBlobClient.uploadData(buffer, {
-    //     blobHTTPHeaders: { blobContentType: "application/pdf" },
-    // });
+    // @ts-ignore
+    await blockBlobClient.uploadData(buffer, {
+        blobHTTPHeaders: { blobContentType: "application/pdf" },
+    });
 
     // context.res = {
     //     status: 200,
     //     body: { message: "CV przesłane i zapisane pomyślnie." }
     // };
-
 
     return { body: `Hello, ${name}!` };
 };
