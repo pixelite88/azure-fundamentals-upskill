@@ -33,6 +33,9 @@ export function LoginForm({
                 body: formData,
             });
 
+            const text = await res.text();
+            console.log("response:", text);
+
             if (res.ok) {
                 console.log("ok",res);
                 // @ts-ignore
