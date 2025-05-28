@@ -1,21 +1,20 @@
-import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
-import { BlobServiceClient } from "@azure/storage-blob";
+import {app, HttpRequest, HttpResponseInit, InvocationContext} from "@azure/functions";
+import {BlobServiceClient} from "@azure/storage-blob";
+
 // scanProcessor -> muszę dopisać go
 
 
 export async function UploadCv(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log(`Http function processed request for url "${request.url}"`);
 
-    const name = request.query.get('name') || await request.text() || 'world';
-
     const file = request.body;
+    console.log(file);
 
     if (!request.body || !request.headers["content-type"]?.includes("multipart/form-data")) {
-        // context.res = {
-        //     status: 400,
-        //     body: { error: "Plik PDF nie został przesłany." }
-        // };
-        return;
+        return {
+            status: 400,
+            body: "Plik PDF nie został przesłany."
+        };
     }
 
     const buffer = request.body;
@@ -37,16 +36,14 @@ export async function UploadCv(request: HttpRequest, context: InvocationContext)
 
     // @ts-ignore
     await blockBlobClient.uploadData(buffer, {
-        blobHTTPHeaders: { blobContentType: "application/pdf" },
+        blobHTTPHeaders: {blobContentType: "application/pdf"},
     });
 
-    // context.res = {
-    //     status: 200,
-    //     body: { message: "CV przesłane i zapisane pomyślnie." }
-    // };
-
-    return { body: `Hello, ${name}!` };
-};
+    return {
+        status: 200,
+        body: "CV przesłane i zapisane pomyślnie."
+    }
+}
 
 app.http('UploadCv', {
     methods: ['GET', 'POST'],
