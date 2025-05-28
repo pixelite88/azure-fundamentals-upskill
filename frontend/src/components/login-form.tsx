@@ -33,16 +33,12 @@ export function LoginForm({
                 body: formData,
             });
 
-            console.log(res);
-            console.log(res.json);
-
-            const result = await res.json();
-            if (result.ok) {
+            if (res.ok) {
                 console.log("ok",res);
-                setStatus(`Sukces: ${result.message}`);
+                setStatus(`Sukces: ${res.statusCode} - ${res.statusText}`);
             } else {
                 console.log("nieok",res);
-                setStatus(`Błąd: ${result.error}`);
+                setStatus(`Błąd: ${res.error}`);
             }
         } catch (err) {
             setStatus(`Błąd połączenia ${JSON.stringify(err)}`);
