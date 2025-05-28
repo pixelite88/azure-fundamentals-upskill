@@ -34,6 +34,7 @@ export function LoginForm({
             });
 
             console.log(res);
+            console.log(res.json);
 
             const result = await res.json();
             if (result.ok) {
