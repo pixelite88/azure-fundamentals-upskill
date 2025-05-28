@@ -35,9 +35,11 @@ export function LoginForm({
 
             if (res.ok) {
                 console.log("ok",res);
+                // @ts-ignore
                 setStatus(`Sukces: ${res.statusCode} - ${res.statusText}`);
             } else {
                 console.log("nieok",res);
+                // @ts-ignore
                 setStatus(`Błąd: ${res.error}`);
             }
         } catch (err) {
