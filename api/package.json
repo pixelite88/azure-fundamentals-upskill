@@ -10,10 +10,12 @@
     "prestart": "npm run clean && npm run build",
     "start": "npm run clean && npm run build && func start",
     "start:nocors": "npm run clean && npm run build && func host start --port 7072 --cors *",
+    "deploy": "npm run build && func azure functionapp publish cv-new-upload-file",
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
     "@azure/functions": "^4.0.0",
+    "@azure/storage-blob": "^12.27.0",
     "busboy": "^1.6.0",
     "dotenv": "^16.5.0"
   },
