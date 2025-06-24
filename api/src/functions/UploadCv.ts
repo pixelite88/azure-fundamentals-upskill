@@ -1,6 +1,10 @@
 import { app, HttpRequest, HttpResponseInit, InvocationContext } from "@azure/functions";
 import { BlobServiceClient } from "@azure/storage-blob";
 import 'dotenv/config';
+import { scanPdfFromDotnet } from "../helpers/runScanFromDotnet";
+
+
+// dodać zmianę kontenera w zależności od tego czy pdf jest ok czy nie
 
 export async function UploadCv(request: HttpRequest, context: InvocationContext): Promise<HttpResponseInit> {
     context.log("UploadCv: rozpoczęcie przetwarzania pliku");
@@ -22,7 +26,14 @@ export async function UploadCv(request: HttpRequest, context: InvocationContext)
     }
 
     const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING);
-    const containerClient = blobServiceClient.getContainerClient("safe-cv");
+   
+    const result = await scanPdfFromDotnet(buffer);
+    context.log("Wynik z .NET:", result);
+
+    const isSafe = result?.isSafe; // lub inny atrybut
+
+    const containerName = isSafe ? "safe-cv" : "unsafe-cv";
+    const containerClient = blobServiceClient.getContainerClient(containerName);
 
     const blobName = `${Date.now()}_uploaded.pdf`;
     const blockBlobClient = containerClient.getBlockBlobClient(blobName);
