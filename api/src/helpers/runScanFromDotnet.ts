@@ -1,7 +1,9 @@
 import * as edge from 'edge-js';
 import * as path from 'path';
 
-const dllPath = path.resolve(__dirname, './libs/S_RiskAssessment.dll');
+const dllPath = path.resolve(__dirname, '../../libs/S_RiskAssessment.dll');
+
+console.log('Loading .NET assembly from:', dllPath);
 
 const scanPdf = edge.func({
     assemblyFile: dllPath,

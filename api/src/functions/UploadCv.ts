@@ -25,7 +25,15 @@ export async function UploadCv(request: HttpRequest, context: InvocationContext)
         };
     }
 
-    const blobServiceClient = BlobServiceClient.fromConnectionString(process.env.STORAGE_CONNECTION_STRING);
+    const storageConnectionString = process.env.STORAGE_CONNECTION_STRING;
+    if (!storageConnectionString) {
+        context.log("Brak STORAGE_CONNECTION_STRING w zmiennych środowiskowych.");
+        return {
+            status: 500,
+            body: "Błąd serwera: brak konfiguracji połączenia z magazynem.",
+        };
+    }
+    const blobServiceClient = BlobServiceClient.fromConnectionString(storageConnectionString);
    
     const result = await scanPdfFromDotnet(buffer);
     context.log("Wynik z .NET:", result);

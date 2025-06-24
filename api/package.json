@@ -1,8 +1,8 @@
 {
-  "name": "",
+  "name": "cv-upload-functions",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/src/functions/*.js",
+   "main": "dist/functionApp.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
