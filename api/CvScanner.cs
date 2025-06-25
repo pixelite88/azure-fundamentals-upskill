@@ -7,6 +7,8 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using S_RiskAssesment;
+using Newtonsoft.Json;
 
 namespace api;
 
@@ -54,7 +56,7 @@ public class UploadCv
         }
 
         // 👇 Skanowanie PDF
-        var result = ScanPdf(buffer);
+        var result = await ScanPdfAsync(buffer, _logger);
         _logger.LogInformation("Wynik z .NET: {Result}", result.IsSafe);
 
         var containerName = result.IsSafe ? "safe-cv" : "unsafe-cv";
@@ -83,15 +85,44 @@ public class UploadCv
         return response;
     }
 
-    // 👇 Lokalna metoda skanująca (możesz podpiąć DLL)
-    private static ScanResult ScanPdf(byte[] fileBytes)
+private static async Task<ScanResult> ScanPdfAsync(byte[] fileBytes, ILogger logger)
+{
+    var licenseKey = "BDD3CBE2-4692-4E74-BF19-79444229343B";
+    var riskAnalyzer = RiskAssessment.Create(licenseKey);
+
+    await using var stream = new MemoryStream(fileBytes);
+    var result = await riskAnalyzer.Scan(stream);
+
+    // 👇 logowanie całego obiektu jako JSON
+    logger.LogInformation("Skan PDF: {Result}", JsonConvert.SerializeObject(result));
+
+    // Zakładamy, że wynik skanowania ma właściwość o innej nazwie, np. Safe lub Success.
+    // Zmień 'IsSafe' na właściwą nazwę właściwości, np. 'Safe' lub 'Success'.
+    bool isSafe = false;
+    if (result != null)
     {
-        // TODO: Wstaw logikę prawdziwego skanowania PDF
-        return new ScanResult { IsSafe = true }; // lub false
+        // Przykład: jeśli właściwość nazywa się 'Safe'
+        // isSafe = result.Safe;
+
+        // Jeśli nie znasz właściwości, możesz spróbować dynamicznie:
+        var resultType = result.GetType();
+        var safeProp = resultType.GetProperty("IsSafe") ?? resultType.GetProperty("Safe") ?? resultType.GetProperty("Success");
+        if (safeProp != null)
+        {
+            isSafe = (bool)(safeProp.GetValue(result) ?? false);
+        }
     }
 
-    private class ScanResult
+    return new ScanResult
+    {
+        IsSafe = isSafe,
+        Details = JsonConvert.SerializeObject(result)
+    };
+}
+
+    public class ScanResult
     {
         public bool IsSafe { get; set; }
+        public string? Details { get; set; }
     }
 }
