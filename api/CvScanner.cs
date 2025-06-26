@@ -129,10 +129,13 @@ public class UploadCv
     {
         try
         {
+            logger.LogInformation("Rozpoczęcie skanowania PDF...");
             var licenseKey = "BDD3CBE2-4692-4E74-BF19-79444229343B";
             var riskAnalyzer = RiskAssessment.Create(licenseKey);
+            logger.LogInformation("Utworzono instancję RiskAssessment z kluczem licencyjnym: {LicenseKey}", licenseKey);
 
             await using var stream = new MemoryStream(fileBytes);
+            logger.LogInformation("Przesyłanie pliku do skanowania...");
             var result = await riskAnalyzer.Scan(stream);
 
             logger.LogInformation("Skan PDF: {Result}", JsonConvert.SerializeObject(result));
