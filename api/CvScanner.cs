@@ -130,11 +130,12 @@ public class UploadCv
         try
         {
             logger.LogInformation("Rozpoczęcie skanowania PDF...");
-            var licenseKey = "BDD3CBE2-4692-4E74-BF19-79444229343B";
+            var licenseKey = "506333AD-F056-4085-9FDC-06A9D87D3683";
             var riskAnalyzer = RiskAssessment.Create(licenseKey);
             logger.LogInformation("Utworzono instancję RiskAssessment z kluczem licencyjnym: {LicenseKey}", licenseKey);
 
             await using var stream = new MemoryStream(fileBytes);
+            stream.Position = 0; 
             logger.LogInformation("Przesyłanie pliku do skanowania...");
             var result = await riskAnalyzer.Scan(stream);
 
@@ -157,10 +158,12 @@ public class UploadCv
                 Details = JsonConvert.SerializeObject(result)
             };
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Błąd podczas działania ScanPdfAsync.");
-            throw; // niech leci dalej
+        catch (Exception ex){
+            logger.LogError("Błąd podczas działania ScanPdfAsync: {Message}\n{StackTrace}\nInner: {Inner}",
+                ex.Message,
+                ex.StackTrace,
+                ex.InnerException?.ToString() ?? "brak");
+            throw;
         }
     }
 
