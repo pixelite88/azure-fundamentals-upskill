@@ -9,6 +9,8 @@ using System.Net;
 using System.Threading.Tasks;
 using S_RiskAssesment;
 using Newtonsoft.Json;
+using HttpMultipartParser;
+using System.Linq;
 
 namespace api;
 
@@ -29,53 +31,53 @@ public class UploadCv
 
         try
         {
-            // Weryfikacja typu pliku
-            if (!req.Headers.TryGetValues("Content-Type", out var contentTypes) ||
-                !string.Join(";", contentTypes).Contains("application/pdf"))
+            // Parsowanie multipart/form-data
+            var parser = await MultipartFormDataParser.ParseAsync(req.Body);
+            var filePart = parser.Files.FirstOrDefault();
+
+            if (filePart == null || filePart.Data == null)
             {
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
-                badRequest.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                await badRequest.WriteStringAsync("Niepoprawny typ pliku – oczekiwano application/pdf.");
+                await badRequest.WriteStringAsync("Nie znaleziono pliku w formularzu.");
                 return badRequest;
             }
 
-            // Wczytanie pliku do bufora
             using var memoryStream = new MemoryStream();
-            await req.Body.CopyToAsync(memoryStream);
+            await filePart.Data.CopyToAsync(memoryStream);
             var buffer = memoryStream.ToArray();
 
             if (buffer.Length == 0)
             {
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
-                badRequest.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                await badRequest.WriteStringAsync("Brak danych w przesłanym pliku.");
+                await badRequest.WriteStringAsync("Przesłany plik jest pusty.");
                 return badRequest;
             }
 
-            // Pobranie connection stringa
             var storageConnectionString = Environment.GetEnvironmentVariable("STORAGE_CONNECTION_STRING");
             if (string.IsNullOrEmpty(storageConnectionString))
             {
                 _logger.LogError("Brak STORAGE_CONNECTION_STRING w zmiennych środowiskowych.");
                 var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-                error.Headers.Add("Content-Type", "text/plain; charset=utf-8");
                 await error.WriteStringAsync("Błąd serwera: brak konfiguracji połączenia z magazynem.");
                 return error;
             }
 
             ScanResult result;
+
+            // Próba skanowania pliku, jeśli błąd - uznaj plik za niebezpieczny
             try
             {
                 result = await ScanPdfAsync(buffer, _logger);
-                _logger.LogInformation("Wynik skanowania z .NET: IsSafe={Result}", result.IsSafe);
+                _logger.LogInformation("Wynik skanowania: IsSafe={Result}", result.IsSafe);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Błąd podczas skanowania PDF.");
-                var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-                error.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                await error.WriteStringAsync("Błąd serwera: nie udało się przeskanować pliku PDF.");
-                return error;
+                _logger.LogError(ex, "Błąd podczas skanowania PDF, plik oznaczany jako niebezpieczny.");
+                result = new ScanResult
+                {
+                    IsSafe = false,
+                    Details = $"Błąd skanowania: {ex.Message}"
+                };
             }
 
             var containerName = result.IsSafe ? "safe-cv" : "unsafe-cv";
@@ -86,31 +88,23 @@ public class UploadCv
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
                 await containerClient.CreateIfNotExistsAsync();
 
-                var blobName = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_uploaded.pdf";
+                var blobName = $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}_{filePart.FileName}";
                 var blobClient = containerClient.GetBlobClient(blobName);
 
                 using var uploadStream = new MemoryStream(buffer);
                 await blobClient.UploadAsync(uploadStream, new BlobHttpHeaders { ContentType = "application/pdf" });
 
-                if (await blobClient.ExistsAsync())
-                {
-                    _logger.LogInformation($"Plik {blobName} został zapisany w kontenerze {containerName}.");
-                }
-                else
-                {
-                    _logger.LogWarning($"Blob {blobName} nie istnieje po zapisie.");
-                }
+                _logger.LogInformation($"Plik {blobName} został zapisany w kontenerze {containerName}.");
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                response.Headers.Add("Content-Type", "text/plain; charset=utf-8");
-                await response.WriteStringAsync($"CV przesłane jako {blobName}");
+                await response.WriteStringAsync(
+                    $"CV przesłane jako {blobName}. Status bezpieczeństwa: {(result.IsSafe ? "bezpieczny" : "niebezpieczny")}.");
                 return response;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Błąd przy zapisie do Azure Blob Storage.");
                 var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-                error.Headers.Add("Content-Type", "text/plain; charset=utf-8");
                 await error.WriteStringAsync("Błąd serwera: nie udało się zapisać pliku do Azure Blob Storage.");
                 return error;
             }
@@ -119,7 +113,6 @@ public class UploadCv
         {
             _logger.LogError(ex, "Nieoczekiwany błąd UploadCv.");
             var error = req.CreateResponse(HttpStatusCode.InternalServerError);
-            error.Headers.Add("Content-Type", "text/plain; charset=utf-8");
             await error.WriteStringAsync("Nieoczekiwany błąd serwera.");
             return error;
         }
@@ -132,14 +125,9 @@ public class UploadCv
             logger.LogInformation("Rozpoczęcie skanowania PDF...");
             var licenseKey = "506333AD-F056-4085-9FDC-06A9D87D3683";
             var riskAnalyzer = RiskAssessment.Create(licenseKey);
-            logger.LogInformation("Utworzono instancję RiskAssessment z kluczem licencyjnym: {LicenseKey}", licenseKey);
-
             await using var stream = new MemoryStream(fileBytes);
-            stream.Position = 0; 
-            logger.LogInformation("Przesyłanie pliku do skanowania...");
+            stream.Position = 0;
             var result = await riskAnalyzer.Scan(stream);
-
-            logger.LogInformation("Skan PDF: {Result}", JsonConvert.SerializeObject(result));
 
             bool isSafe = false;
             if (result != null)
@@ -158,7 +146,8 @@ public class UploadCv
                 Details = JsonConvert.SerializeObject(result)
             };
         }
-        catch (Exception ex){
+        catch (Exception ex)
+        {
             logger.LogError("Błąd podczas działania ScanPdfAsync: {Message}\n{StackTrace}\nInner: {Inner}",
                 ex.Message,
                 ex.StackTrace,

@@ -28,10 +28,9 @@ export function LoginForm({
         formData.append("cv", file);
 
         try {
-                const res = await fetch("https://cv-scanner-func-gkcrd3hgehbtc8gd.polandcentral-01.azurewebsites.net/api/uploadcv", {
+            const res = await fetch("https://cv-scanner-func-gkcrd3hgehbtc8gd.polandcentral-01.azurewebsites.net/api/uploadcv", {
                 method: "POST",
-                headers: {"Content-Type": "application/pdf"},
-                body: formData,
+                body: formData, // ✅ BRAK nagłówków – przeglądarka zrobi to za Ciebie
             });
 
             const result = await res.text();

@@ -48,3 +48,8 @@ W skrócie:
 5. Authentication / Authorization
    - Jedna rola:
      - Recruiter → dostęp tylko do safe-cv.
+
+     Budowanie aplikacji:
+     - dotnet clean
+     - dotnet build
+     - func azure functionapp publish cv-scanner-func (publishowanie)
